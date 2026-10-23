@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#14181f">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
-<title>Quick Add</title>
+<title>Reminders + Scheduling</title>
 <style>
   :root {
     --bg: #14181f;
@@ -56,7 +56,7 @@
 </head>
 <body>
 <header>
-  <h1>Quick Add</h1>
+  <h1>Reminders + Scheduling</h1>
   <button class="gear" id="gear" aria-label="Settings">&#9881;</button>
 </header>
 
@@ -73,8 +73,7 @@
 
 <main>
   <textarea id="text" placeholder="Try: Make a reminder to call the bank tomorrow, or: Add dentist to my calendar Tuesday at 3pm" autofocus></textarea>
-  <p class="hint">Tip: tap the mic on your keyboard to dictate.</p>
-  <button class="primary" id="go">Understand it</button>
+  <button class="primary" id="go" style="margin-top:12px">Submit</button>
   <div id="status" class="status"></div>
 
   <section id="confirm" class="card hidden">
