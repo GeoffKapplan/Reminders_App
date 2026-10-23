@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14181f">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<title>Quick Add</title>
+<style>
+  :root {
+    --bg: #14181f;
+    --card: #1d232d;
+    --line: #2c3544;
+    --text: #e8ecf2;
+    --muted: #8b97a9;
+    --accent: #5aa9ff;
+    --ok: #4cc38a;
+    --err: #ff6b6b;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { padding: env(safe-area-inset-top) 16px calc(24px + env(safe-area-inset-bottom)); max-width: 560px; margin: 0 auto; }
+  header { display: flex; align-items: center; justify-content: space-between; padding: 18px 0 10px; }
+  h1 { font-size: 20px; margin: 0; letter-spacing: .2px; }
+  .gear { background: none; border: 0; color: var(--muted); font-size: 22px; padding: 6px 8px; }
+  textarea, input, select {
+    width: 100%; background: var(--card); color: var(--text); border: 1px solid var(--line);
+    border-radius: 12px; padding: 12px 14px; font: inherit; }
+  textarea { min-height: 96px; resize: vertical; }
+  textarea:focus, input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
+  .hint { color: var(--muted); font-size: 13px; margin: 8px 2px 14px; }
+  button.primary, button.secondary {
+    width: 100%; border: 0; border-radius: 12px; padding: 14px; font: inherit; font-weight: 600; }
+  button.primary { background: var(--accent); color: #07121f; }
+  button.secondary { background: var(--card); color: var(--text); border: 1px solid var(--line); }
+  button:disabled { opacity: .5; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin-top: 18px; }
+  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin: 0 0 12px; font-weight: 600; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 5px; }
+  .row { display: flex; gap: 10px; }
+  .row > div { flex: 1; min-width: 0; }
+  .check { display: flex; align-items: center; gap: 10px; margin-top: 12px; color: var(--text); font-size: 15px; }
+  .check input { width: 20px; height: 20px; accent-color: var(--accent); padding: 0; }
+  .btns { display: flex; gap: 10px; margin-top: 18px; }
+  .status { margin-top: 14px; font-size: 14px; min-height: 20px; }
+  .status.ok { color: var(--ok); } .status.err { color: var(--err); }
+  .hidden { display: none; }
+  .recent { margin-top: 24px; }
+  .recent h3 { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; margin: 0 0 8px; font-weight: 600; }
+  .recent li { list-style: none; padding: 9px 12px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 6px; font-size: 14px; }
+  .recent ul { margin: 0; padding: 0; }
+  .recent small { color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Quick Add</h1>
+  <button class="gear" id="gear" aria-label="Settings">&#9881;</button>
+</header>
+
+<section id="settings" class="card hidden" style="margin-top:0">
+  <h2>Settings</h2>
+  <label for="url">Apps Script web app URL</label>
+  <input id="url" type="url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off">
+  <label for="token">App token</label>
+  <input id="token" type="password" placeholder="Same value as APP_TOKEN in Script Properties" autocomplete="off">
+  <div class="btns">
+    <button class="primary" id="saveSettings">Save settings</button>
+  </div>
+</section>
+
+<main>
+  <textarea id="text" placeholder="Try: Make a reminder to call the bank tomorrow, or: Add dentist to my calendar Tuesday at 3pm" autofocus></textarea>
+  <p class="hint">Tip: tap the mic on your keyboard to dictate.</p>
+  <button class="primary" id="go">Understand it</button>
+  <div id="status" class="status"></div>
+
+  <section id="confirm" class="card hidden">
+    <h2>Does this look right?</h2>
+    <label for="kind">Type</label>
+    <select id="kind">
+      <option value="event">Calendar event</option>
+      <option value="task">Task / reminder</option>
+    </select>
+    <label for="title">Title</label>
+    <input id="title" type="text">
+    <label for="date">Date</label>
+    <input id="date" type="date">
+    <div class="check" id="allDayRow"><input id="allDay" type="checkbox"><label for="allDay" style="margin:0;color:var(--text)">All day</label></div>
+    <div class="row" id="timeRow">
+      <div><label for="start">Start</label><input id="start" type="time"></div>
+      <div><label for="end">End</label><input id="end" type="time"></div>
+    </div>
+    <label for="notes">Notes</label>
+    <input id="notes" type="text">
+    <div class="btns">
+      <button class="secondary" id="cancel">Cancel</button>
+      <button class="primary" id="save">Save</button>
+    </div>
+  </section>
+
+  <section class="recent hidden" id="recentWrap">
+    <h3>Added recently</h3>
+    <ul id="recent"></ul>
+  </section>
+</main>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var store = {
+    get: function (k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } },
+    set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  };
+
+  var current = null;
+
+  function setStatus(msg, cls) {
+    var s = $('status');
+    s.textContent = msg || '';
+    s.className = 'status' + (cls ? ' ' + cls : '');
+  }
+
+  function nowString() {
+    var d = new Date();
+    var p = function (n) { return String(n).padStart(2, '0'); };
+    var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    return days[d.getDay()] + ' ' + d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) +
+      ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+
+  function call(payload) {
+    var url = store.get('qa_url'), token = store.get('qa_token');
+    if (!url || !token) {
+      $('settings').classList.remove('hidden');
+      return Promise.reject(new Error('Add your Apps Script URL and token in settings first.'));
+    }
+    payload.token = token;
+    // text/plain avoids a CORS preflight, which Apps Script cannot answer
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    }).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j.ok) throw new Error(j.error || 'Something went wrong');
+      return j;
+    });
+  }
+
+  function showConfirm(item) {
+    current = item;
+    $('kind').value = item.kind === 'task' ? 'task' : 'event';
+    $('title').value = item.title || '';
+    $('date').value = item.date || '';
+    $('allDay').checked = !!item.allDay || !item.start;
+    $('start').value = item.start || '';
+    $('end').value = item.end || '';
+    $('notes').value = item.notes || '';
+    syncFields();
+    $('confirm').classList.remove('hidden');
+    $('confirm').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function syncFields() {
+    var isEvent = $('kind').value === 'event';
+    $('allDayRow').classList.toggle('hidden', !isEvent);
+    var showTimes = isEvent && !$('allDay').checked;
+    $('timeRow').classList.toggle('hidden', !showTimes && isEvent);
+    if (!isEvent) {
+      // tasks only carry a date; a time is saved into the notes
+      $('timeRow').classList.remove('hidden');
+      $('end').parentNode.classList.add('hidden');
+    } else {
+      $('end').parentNode.classList.remove('hidden');
+    }
+  }
+
+  function readForm() {
+    var kind = $('kind').value;
+    return {
+      kind: kind,
+      title: $('title').value.trim(),
+      date: $('date').value,
+      allDay: kind === 'event' ? $('allDay').checked : false,
+      start: $('start').value || null,
+      end: kind === 'event' ? ($('end').value || null) : null,
+      notes: $('notes').value.trim()
+    };
+  }
+
+  function addRecent(item) {
+    var list = [];
+    try { list = JSON.parse(store.get('qa_recent') || '[]'); } catch (e) {}
+    list.unshift({ kind: item.kind, title: item.title, date: item.date, start: item.start });
+    list = list.slice(0, 5);
+    store.set('qa_recent', JSON.stringify(list));
+    renderRecent();
+  }
+
+  function renderRecent() {
+    var list = [];
+    try { list = JSON.parse(store.get('qa_recent') || '[]'); } catch (e) {}
+    var ul = $('recent');
+    ul.innerHTML = '';
+    list.forEach(function (it) {
+      var li = document.createElement('li');
+      var when = it.date + (it.start ? ' ' + it.start : '');
+      li.textContent = (it.kind === 'task' ? '☑ ' : '📅 ') + it.title + ' ';
+      var sm = document.createElement('small');
+      sm.textContent = when;
+      li.appendChild(sm);
+      ul.appendChild(li);
+    });
+    $('recentWrap').classList.toggle('hidden', list.length === 0);
+  }
+
+  $('gear').onclick = function () {
+    $('url').value = store.get('qa_url');
+    $('token').value = store.get('qa_token');
+    $('settings').classList.toggle('hidden');
+  };
+  $('saveSettings').onclick = function () {
+    store.set('qa_url', $('url').value.trim());
+    store.set('qa_token', $('token').value.trim());
+    $('settings').classList.add('hidden');
+    setStatus('Settings saved.', 'ok');
+  };
+
+  $('kind').onchange = syncFields;
+  $('allDay').onchange = syncFields;
+
+  $('go').onclick = function () {
+    var text = $('text').value.trim();
+    if (!text) return;
+    $('go').disabled = true;
+    setStatus('Working on it…');
+    $('confirm').classList.add('hidden');
+    call({ action: 'parse', text: text, now: nowString() })
+      .then(function (j) { setStatus(''); showConfirm(j.item); })
+      .catch(function (e) { setStatus(e.message, 'err'); })
+      .then(function () { $('go').disabled = false; });
+  };
+
+  $('cancel').onclick = function () {
+    $('confirm').classList.add('hidden');
+    setStatus('');
+  };
+
+  $('save').onclick = function () {
+    var item = readForm();
+    if (!item.title || !item.date) { setStatus('Title and date are required.', 'err'); return; }
+    $('save').disabled = true;
+    setStatus('Saving…');
+    call({ action: 'save', item: item })
+      .then(function () {
+        addRecent(item);
+        $('confirm').classList.add('hidden');
+        $('text').value = '';
+        setStatus('Added to ' + (item.kind === 'task' ? 'Google Tasks' : 'Google Calendar') + '.', 'ok');
+      })
+      .catch(function (e) { setStatus(e.message, 'err'); })
+      .then(function () { $('save').disabled = false; });
+  };
+
+  $('text').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) $('go').click();
+  });
+
+  if (!store.get('qa_url') || !store.get('qa_token')) $('settings').classList.remove('hidden');
+  renderRecent();
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  }
+})();
+</script>
+</body>
+</html>
