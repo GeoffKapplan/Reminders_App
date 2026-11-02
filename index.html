@@ -48,6 +48,11 @@
   .status.ok { color: var(--ok); } .status.err { color: var(--err); }
   .hidden { display: none; }
   .recent { margin-top: 24px; }
+  .days { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { flex: 1 0 40px; background: var(--bg); color: var(--muted); border: 1px solid var(--line);
+    border-radius: 10px; padding: 9px 0; font: inherit; font-size: 14px; }
+  .chip.on { background: var(--accent); color: #07121f; border-color: var(--accent); font-weight: 600; }
+  #repeatNote { margin: 10px 2px 0; }
   .recent summary { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; font-weight: 600;
     cursor: pointer; list-style: none; padding: 8px 0; user-select: none; }
   .recent summary::-webkit-details-marker { display: none; }
@@ -96,6 +101,35 @@
     <div class="row" id="timeRow">
       <div><label for="start">Start</label><input id="start" type="time"></div>
       <div><label for="end">End</label><input id="end" type="time"></div>
+    </div>
+    <label for="repeat">Repeat</label>
+    <select id="repeat">
+      <option value="">Does not repeat</option>
+      <option value="daily">Daily</option>
+      <option value="weekly">Weekly</option>
+      <option value="monthly">Monthly</option>
+      <option value="yearly">Yearly</option>
+    </select>
+    <div id="repeatOpts" class="hidden">
+      <div class="row">
+        <div><label for="interval" id="intervalLabel">Every (weeks)</label><input id="interval" type="number" min="1" step="1" value="1" inputmode="numeric"></div>
+        <div><label for="ends">Ends</label>
+          <select id="ends"><option value="never">Never</option><option value="on">On a date</option></select></div>
+      </div>
+      <div id="daysWrap" class="hidden">
+        <label>On days (leave blank for the same weekday as the date)</label>
+        <div class="days" id="days">
+          <button type="button" class="chip" data-d="MO">Mon</button>
+          <button type="button" class="chip" data-d="TU">Tue</button>
+          <button type="button" class="chip" data-d="WE">Wed</button>
+          <button type="button" class="chip" data-d="TH">Thu</button>
+          <button type="button" class="chip" data-d="FR">Fri</button>
+          <button type="button" class="chip" data-d="SA">Sat</button>
+          <button type="button" class="chip" data-d="SU">Sun</button>
+        </div>
+      </div>
+      <div id="untilWrap" class="hidden"><label for="until">Last day</label><input id="until" type="date"></div>
+      <p class="hint" id="repeatNote"></p>
     </div>
     <label for="notes">Notes</label>
     <input id="notes" type="text">
@@ -162,7 +196,18 @@
     $('start').value = item.start || '';
     $('end').value = item.end || '';
     $('notes').value = item.notes || '';
+    var rep = item.repeat || null;
+    $('repeat').value = rep ? rep.freq : '';
+    $('interval').value = rep && rep.interval ? rep.interval : 1;
+    $('ends').value = rep && rep.until ? 'on' : 'never';
+    $('until').value = rep && rep.until ? rep.until : '';
+    Array.prototype.forEach.call(document.querySelectorAll('#days .chip'), function (c) {
+      var on = !!(rep && rep.days && rep.days.indexOf(c.getAttribute('data-d')) >= 0);
+      c.classList.toggle('on', on);
+      c.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
     syncFields();
+    syncRepeat();
     $('confirm').classList.remove('hidden');
     $('confirm').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
@@ -181,9 +226,45 @@
     }
   }
 
+  function syncRepeat() {
+    var freq = $('repeat').value;
+    var units = { daily: 'days', weekly: 'weeks', monthly: 'months', yearly: 'years' };
+    $('repeatOpts').classList.toggle('hidden', !freq);
+    if (!freq) return;
+    $('intervalLabel').textContent = 'Every (' + units[freq] + ')';
+    $('daysWrap').classList.toggle('hidden', freq !== 'weekly');
+    $('untilWrap').classList.toggle('hidden', $('ends').value !== 'on');
+    var note = '';
+    if ($('kind').value === 'task') {
+      note = $('start').value
+        ? 'Repeating reminders are saved to Google Calendar, with an alert at the start time.'
+        : 'Repeating items with no time are saved to Google Calendar as all-day events.';
+    }
+    $('repeatNote').textContent = note;
+    $('repeatNote').classList.toggle('hidden', !note);
+  }
+
+  function readRepeat() {
+    var freq = $('repeat').value;
+    if (!freq) return null;
+    var days = [];
+    if (freq === 'weekly') {
+      Array.prototype.forEach.call(document.querySelectorAll('#days .chip.on'), function (c) {
+        days.push(c.getAttribute('data-d'));
+      });
+    }
+    return {
+      freq: freq,
+      interval: Math.max(1, parseInt($('interval').value, 10) || 1),
+      days: days,
+      until: $('ends').value === 'on' ? ($('until').value || null) : null
+    };
+  }
+
   function readForm() {
     var kind = $('kind').value;
     return {
+      repeat: readRepeat(),
       kind: kind,
       title: $('title').value.trim(),
       date: $('date').value,
@@ -197,7 +278,7 @@
   function addRecent(item) {
     var list = [];
     try { list = JSON.parse(store.get('qa_recent') || '[]'); } catch (e) {}
-    list.unshift({ kind: item.kind, title: item.title, date: item.date, start: item.start });
+    list.unshift({ kind: item.kind, title: item.title, date: item.date, start: item.start, repeat: !!item.repeat });
     list = list.slice(0, 5);
     store.set('qa_recent', JSON.stringify(list));
     renderRecent();
@@ -211,7 +292,7 @@
     list.forEach(function (it) {
       var li = document.createElement('li');
       var when = it.date + (it.start ? ' ' + it.start : '');
-      li.textContent = (it.kind === 'task' ? '☑ ' : '📅 ') + it.title + ' ';
+      li.textContent = (it.kind === 'task' ? '☑ ' : '📅 ') + (it.repeat ? '↻ ' : '') + it.title + ' ';
       var sm = document.createElement('small');
       sm.textContent = when;
       li.appendChild(sm);
@@ -232,8 +313,18 @@
     setStatus('Settings saved.', 'ok');
   };
 
-  $('kind').onchange = syncFields;
+  $('kind').onchange = function () { syncFields(); syncRepeat(); };
   $('allDay').onchange = syncFields;
+  $('start').oninput = syncRepeat;
+  $('repeat').onchange = syncRepeat;
+  $('ends').onchange = syncRepeat;
+  Array.prototype.forEach.call(document.querySelectorAll('#days .chip'), function (c) {
+    c.onclick = function () {
+      var on = !c.classList.contains('on');
+      c.classList.toggle('on', on);
+      c.setAttribute('aria-pressed', on ? 'true' : 'false');
+    };
+  });
 
   $('go').onclick = function () {
     var text = $('text').value.trim();
@@ -255,6 +346,10 @@
   $('save').onclick = function () {
     var item = readForm();
     if (!item.title || !item.date) { setStatus('Title and date are required.', 'err'); return; }
+    if ($('repeat').value && $('ends').value === 'on') {
+      if (!item.repeat.until) { setStatus('Pick a last day, or set Ends to Never.', 'err'); return; }
+      if (item.repeat.until < item.date) { setStatus('The last day is before the first date.', 'err'); return; }
+    }
     $('save').disabled = true;
     setStatus('Saving…');
     call({ action: 'save', item: item })
@@ -262,7 +357,8 @@
         addRecent(item);
         $('confirm').classList.add('hidden');
         $('text').value = '';
-        setStatus('Added to ' + (item.kind === 'task' ? 'Google Tasks' : 'Google Calendar') + '.', 'ok');
+        var toTasks = item.kind === 'task' && !item.start && !item.repeat;
+        setStatus('Added to ' + (toTasks ? 'Google Tasks' : 'Google Calendar') + '.', 'ok');
       })
       .catch(function (e) { setStatus(e.message, 'err'); })
       .then(function () { $('save').disabled = false; });
