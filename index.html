@@ -37,7 +37,7 @@
   button.secondary { background: var(--card); color: var(--text); border: 1px solid var(--line); }
   button:disabled { opacity: .5; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin-top: 18px; }
-  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin: 0 0 12px; font-weight: 600; }
+  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin: 0 0 4px; font-weight: 600; }
   label { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 5px; }
   .row { display: flex; gap: 10px; }
   .row > div { flex: 1; min-width: 0; }
@@ -46,13 +46,25 @@
   .btns { display: flex; gap: 10px; margin-top: 18px; }
   .status { margin-top: 14px; font-size: 14px; min-height: 20px; }
   .status.ok { color: var(--ok); } .status.err { color: var(--err); }
-  .hidden { display: none; }
-  .recent { margin-top: 24px; }
+  .hidden { display: none !important; }
+
+  /* item cards inside the confirm panel */
+  .item { margin-top: 6px; }
+  .multi .item { background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 4px 14px 14px; margin-top: 12px; }
+  .itemHead { display: none; align-items: center; justify-content: space-between; padding-top: 10px; }
+  .multi .itemHead { display: flex; }
+  .itemNum { font-size: 13px; font-weight: 600; color: var(--accent); }
+  .rm { background: none; border: 0; color: var(--muted); font: inherit; font-size: 13px; padding: 6px 2px; text-decoration: underline; }
+  .itemErr { color: var(--err); font-size: 13px; margin: 10px 2px 0; }
+
   .days { display: flex; gap: 6px; flex-wrap: wrap; }
   .chip { flex: 1 0 40px; background: var(--bg); color: var(--muted); border: 1px solid var(--line);
     border-radius: 10px; padding: 9px 0; font: inherit; font-size: 14px; }
+  .multi .chip { background: var(--card); }
   .chip.on { background: var(--accent); color: #07121f; border-color: var(--accent); font-weight: 600; }
-  #repeatNote { margin: 10px 2px 0; }
+  .repeatNote { margin: 10px 2px 0; }
+
+  .recent { margin-top: 24px; }
   .recent summary { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; font-weight: 600;
     cursor: pointer; list-style: none; padding: 8px 0; user-select: none; }
   .recent summary::-webkit-details-marker { display: none; }
@@ -87,52 +99,8 @@
   <div id="status" class="status"></div>
 
   <section id="confirm" class="card hidden">
-    <h2>Does this look right?</h2>
-    <label for="kind">Type</label>
-    <select id="kind">
-      <option value="event">Calendar event</option>
-      <option value="task">Task / reminder</option>
-    </select>
-    <label for="title">Title</label>
-    <input id="title" type="text">
-    <label for="date">Date</label>
-    <input id="date" type="date">
-    <div class="check" id="allDayRow"><input id="allDay" type="checkbox"><label for="allDay" style="margin:0;color:var(--text)">All day</label></div>
-    <div class="row" id="timeRow">
-      <div><label for="start">Start</label><input id="start" type="time"></div>
-      <div><label for="end">End</label><input id="end" type="time"></div>
-    </div>
-    <label for="repeat">Repeat</label>
-    <select id="repeat">
-      <option value="">Does not repeat</option>
-      <option value="daily">Daily</option>
-      <option value="weekly">Weekly</option>
-      <option value="monthly">Monthly</option>
-      <option value="yearly">Yearly</option>
-    </select>
-    <div id="repeatOpts" class="hidden">
-      <div class="row">
-        <div><label for="interval" id="intervalLabel">Every (weeks)</label><input id="interval" type="number" min="1" step="1" value="1" inputmode="numeric"></div>
-        <div><label for="ends">Ends</label>
-          <select id="ends"><option value="never">Never</option><option value="on">On a date</option></select></div>
-      </div>
-      <div id="daysWrap" class="hidden">
-        <label>On days (leave blank for the same weekday as the date)</label>
-        <div class="days" id="days">
-          <button type="button" class="chip" data-d="MO">Mon</button>
-          <button type="button" class="chip" data-d="TU">Tue</button>
-          <button type="button" class="chip" data-d="WE">Wed</button>
-          <button type="button" class="chip" data-d="TH">Thu</button>
-          <button type="button" class="chip" data-d="FR">Fri</button>
-          <button type="button" class="chip" data-d="SA">Sat</button>
-          <button type="button" class="chip" data-d="SU">Sun</button>
-        </div>
-      </div>
-      <div id="untilWrap" class="hidden"><label for="until">Last day</label><input id="until" type="date"></div>
-      <p class="hint" id="repeatNote"></p>
-    </div>
-    <label for="notes">Notes</label>
-    <input id="notes" type="text">
+    <h2 id="confirmTitle">Does this look right?</h2>
+    <div id="cards"></div>
     <div class="btns">
       <button class="secondary" id="cancel">Cancel</button>
       <button class="primary" id="save">Save</button>
@@ -145,6 +113,58 @@
   </details>
 </main>
 
+<template id="cardTpl">
+  <div class="item">
+    <div class="itemHead"><span class="itemNum"></span><button type="button" class="rm" data-f="remove">Remove</button></div>
+    <label for="kind__N__">Type</label>
+    <select id="kind__N__" data-f="kind">
+      <option value="event">Calendar event</option>
+      <option value="task">Task / reminder</option>
+    </select>
+    <label for="title__N__">Title</label>
+    <input id="title__N__" data-f="title" type="text">
+    <label for="date__N__">Date</label>
+    <input id="date__N__" data-f="date" type="date">
+    <div class="check" data-f="allDayRow"><input id="allDay__N__" data-f="allDay" type="checkbox"><label for="allDay__N__" style="margin:0;color:var(--text)">All day</label></div>
+    <div class="row" data-f="timeRow">
+      <div><label for="start__N__">Start</label><input id="start__N__" data-f="start" type="time"></div>
+      <div data-f="endWrap"><label for="end__N__">End</label><input id="end__N__" data-f="end" type="time"></div>
+    </div>
+    <label for="repeat__N__">Repeat</label>
+    <select id="repeat__N__" data-f="repeat">
+      <option value="">Does not repeat</option>
+      <option value="daily">Daily</option>
+      <option value="weekly">Weekly</option>
+      <option value="monthly">Monthly</option>
+      <option value="yearly">Yearly</option>
+    </select>
+    <div data-f="repeatOpts" class="hidden">
+      <div class="row">
+        <div><label for="interval__N__" data-f="intervalLabel">Every (weeks)</label><input id="interval__N__" data-f="interval" type="number" min="1" step="1" value="1" inputmode="numeric"></div>
+        <div><label for="ends__N__">Ends</label>
+          <select id="ends__N__" data-f="ends"><option value="never">Never</option><option value="on">On a date</option></select></div>
+      </div>
+      <div data-f="daysWrap" class="hidden">
+        <label>On days (leave blank for the same weekday as the date)</label>
+        <div class="days">
+          <button type="button" class="chip" data-d="MO">Mon</button>
+          <button type="button" class="chip" data-d="TU">Tue</button>
+          <button type="button" class="chip" data-d="WE">Wed</button>
+          <button type="button" class="chip" data-d="TH">Thu</button>
+          <button type="button" class="chip" data-d="FR">Fri</button>
+          <button type="button" class="chip" data-d="SA">Sat</button>
+          <button type="button" class="chip" data-d="SU">Sun</button>
+        </div>
+      </div>
+      <div data-f="untilWrap" class="hidden"><label for="until__N__">Last day</label><input id="until__N__" data-f="until" type="date"></div>
+      <p class="hint repeatNote" data-f="repeatNote"></p>
+    </div>
+    <label for="notes__N__">Notes</label>
+    <input id="notes__N__" data-f="notes" type="text">
+    <div class="itemErr hidden" data-f="err"></div>
+  </div>
+</template>
+
 <script>
 (function () {
   var $ = function (id) { return document.getElementById(id); };
@@ -152,8 +172,7 @@
     get: function (k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } },
     set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
   };
-
-  var current = null;
+  var cardCount = 0;
 
   function setStatus(msg, cls) {
     var s = $('status');
@@ -187,99 +206,146 @@
     });
   }
 
-  function showConfirm(item) {
-    current = item;
-    $('kind').value = item.kind === 'task' ? 'task' : 'event';
-    $('title').value = item.title || '';
-    $('date').value = item.date || '';
-    $('allDay').checked = !!item.allDay || !item.start;
-    $('start').value = item.start || '';
-    $('end').value = item.end || '';
-    $('notes').value = item.notes || '';
+  // ---------- item cards ----------
+
+  function f(card, name) { return card.querySelector('[data-f="' + name + '"]'); }
+  function allCards() { return Array.prototype.slice.call($('cards').querySelectorAll('.item')); }
+
+  function syncFields(card) {
+    var isEvent = f(card, 'kind').value === 'event';
+    f(card, 'allDayRow').classList.toggle('hidden', !isEvent);
+    f(card, 'timeRow').classList.toggle('hidden', isEvent && f(card, 'allDay').checked);
+    f(card, 'endWrap').classList.toggle('hidden', !isEvent);
+  }
+
+  function syncRepeat(card) {
+    var freq = f(card, 'repeat').value;
+    var units = { daily: 'days', weekly: 'weeks', monthly: 'months', yearly: 'years' };
+    f(card, 'repeatOpts').classList.toggle('hidden', !freq);
+    if (!freq) return;
+    f(card, 'intervalLabel').textContent = 'Every (' + units[freq] + ')';
+    f(card, 'daysWrap').classList.toggle('hidden', freq !== 'weekly');
+    f(card, 'untilWrap').classList.toggle('hidden', f(card, 'ends').value !== 'on');
+    var note = '';
+    if (f(card, 'kind').value === 'task') {
+      note = f(card, 'start').value
+        ? 'Repeating reminders are saved to Google Calendar, with an alert at the start time.'
+        : 'Repeating items with no time are saved to Google Calendar as all-day events.';
+    }
+    f(card, 'repeatNote').textContent = note;
+    f(card, 'repeatNote').classList.toggle('hidden', !note);
+  }
+
+  function fillCard(card, item) {
     var rep = item.repeat || null;
-    $('repeat').value = rep ? rep.freq : '';
-    $('interval').value = rep && rep.interval ? rep.interval : 1;
-    $('ends').value = rep && rep.until ? 'on' : 'never';
-    $('until').value = rep && rep.until ? rep.until : '';
-    Array.prototype.forEach.call(document.querySelectorAll('#days .chip'), function (c) {
+    f(card, 'kind').value = item.kind === 'task' ? 'task' : 'event';
+    f(card, 'title').value = item.title || '';
+    f(card, 'date').value = item.date || '';
+    f(card, 'allDay').checked = !!item.allDay || !item.start;
+    f(card, 'start').value = item.start || '';
+    f(card, 'end').value = item.end || '';
+    f(card, 'notes').value = item.notes || '';
+    f(card, 'repeat').value = rep ? rep.freq : '';
+    f(card, 'interval').value = rep && rep.interval ? rep.interval : 1;
+    f(card, 'ends').value = rep && rep.until ? 'on' : 'never';
+    f(card, 'until').value = rep && rep.until ? rep.until : '';
+    Array.prototype.forEach.call(card.querySelectorAll('.chip'), function (c) {
       var on = !!(rep && rep.days && rep.days.indexOf(c.getAttribute('data-d')) >= 0);
       c.classList.toggle('on', on);
       c.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
-    syncFields();
-    syncRepeat();
+    syncFields(card);
+    syncRepeat(card);
+  }
+
+  function readCard(card) {
+    var kind = f(card, 'kind').value;
+    var freq = f(card, 'repeat').value;
+    var repeat = null;
+    if (freq) {
+      var days = [];
+      if (freq === 'weekly') {
+        Array.prototype.forEach.call(card.querySelectorAll('.chip.on'), function (c) {
+          days.push(c.getAttribute('data-d'));
+        });
+      }
+      repeat = {
+        freq: freq,
+        interval: Math.max(1, parseInt(f(card, 'interval').value, 10) || 1),
+        days: days,
+        until: f(card, 'ends').value === 'on' ? (f(card, 'until').value || null) : null
+      };
+    }
+    return {
+      kind: kind,
+      title: f(card, 'title').value.trim(),
+      date: f(card, 'date').value,
+      allDay: kind === 'event' ? f(card, 'allDay').checked : false,
+      start: f(card, 'start').value || null,
+      end: kind === 'event' ? (f(card, 'end').value || null) : null,
+      notes: f(card, 'notes').value.trim(),
+      repeat: repeat
+    };
+  }
+
+  function showCardError(card, msg) {
+    var e = f(card, 'err');
+    e.textContent = msg || '';
+    e.classList.toggle('hidden', !msg);
+  }
+
+  function makeCard(item) {
+    cardCount += 1;
+    var wrap = document.createElement('div');
+    wrap.innerHTML = $('cardTpl').innerHTML.replace(/__N__/g, String(cardCount));
+    var card = wrap.firstElementChild;
+    fillCard(card, item);
+    f(card, 'kind').onchange = function () { syncFields(card); syncRepeat(card); };
+    f(card, 'allDay').onchange = function () { syncFields(card); };
+    f(card, 'start').oninput = function () { syncRepeat(card); };
+    f(card, 'repeat').onchange = function () { syncRepeat(card); };
+    f(card, 'ends').onchange = function () { syncRepeat(card); };
+    Array.prototype.forEach.call(card.querySelectorAll('.chip'), function (c) {
+      c.onclick = function () {
+        var on = !c.classList.contains('on');
+        c.classList.toggle('on', on);
+        c.setAttribute('aria-pressed', on ? 'true' : 'false');
+      };
+    });
+    f(card, 'remove').onclick = function () {
+      card.parentNode.removeChild(card);
+      refreshLayout();
+      if (!allCards().length) { $('confirm').classList.add('hidden'); setStatus(''); }
+    };
+    return card;
+  }
+
+  function refreshLayout() {
+    var cards = allCards();
+    var n = cards.length;
+    $('cards').classList.toggle('multi', n > 1);
+    cards.forEach(function (c, i) {
+      c.querySelector('.itemNum').textContent = 'Item ' + (i + 1) + ' of ' + n;
+    });
+    $('confirmTitle').textContent = n > 1 ? 'Found ' + n + ' items. Check each one.' : 'Does this look right?';
+    $('save').textContent = n > 1 ? 'Save all ' + n : 'Save';
+  }
+
+  function showConfirm(items) {
+    $('cards').innerHTML = '';
+    items.forEach(function (it) { $('cards').appendChild(makeCard(it)); });
+    refreshLayout();
     $('confirm').classList.remove('hidden');
     $('confirm').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
-  function syncFields() {
-    var isEvent = $('kind').value === 'event';
-    $('allDayRow').classList.toggle('hidden', !isEvent);
-    var showTimes = isEvent && !$('allDay').checked;
-    $('timeRow').classList.toggle('hidden', !showTimes && isEvent);
-    if (!isEvent) {
-      // tasks only carry a date; a time is saved into the notes
-      $('timeRow').classList.remove('hidden');
-      $('end').parentNode.classList.add('hidden');
-    } else {
-      $('end').parentNode.classList.remove('hidden');
-    }
-  }
-
-  function syncRepeat() {
-    var freq = $('repeat').value;
-    var units = { daily: 'days', weekly: 'weeks', monthly: 'months', yearly: 'years' };
-    $('repeatOpts').classList.toggle('hidden', !freq);
-    if (!freq) return;
-    $('intervalLabel').textContent = 'Every (' + units[freq] + ')';
-    $('daysWrap').classList.toggle('hidden', freq !== 'weekly');
-    $('untilWrap').classList.toggle('hidden', $('ends').value !== 'on');
-    var note = '';
-    if ($('kind').value === 'task') {
-      note = $('start').value
-        ? 'Repeating reminders are saved to Google Calendar, with an alert at the start time.'
-        : 'Repeating items with no time are saved to Google Calendar as all-day events.';
-    }
-    $('repeatNote').textContent = note;
-    $('repeatNote').classList.toggle('hidden', !note);
-  }
-
-  function readRepeat() {
-    var freq = $('repeat').value;
-    if (!freq) return null;
-    var days = [];
-    if (freq === 'weekly') {
-      Array.prototype.forEach.call(document.querySelectorAll('#days .chip.on'), function (c) {
-        days.push(c.getAttribute('data-d'));
-      });
-    }
-    return {
-      freq: freq,
-      interval: Math.max(1, parseInt($('interval').value, 10) || 1),
-      days: days,
-      until: $('ends').value === 'on' ? ($('until').value || null) : null
-    };
-  }
-
-  function readForm() {
-    var kind = $('kind').value;
-    return {
-      repeat: readRepeat(),
-      kind: kind,
-      title: $('title').value.trim(),
-      date: $('date').value,
-      allDay: kind === 'event' ? $('allDay').checked : false,
-      start: $('start').value || null,
-      end: kind === 'event' ? ($('end').value || null) : null,
-      notes: $('notes').value.trim()
-    };
-  }
+  // ---------- recent list ----------
 
   function addRecent(item) {
     var list = [];
     try { list = JSON.parse(store.get('qa_recent') || '[]'); } catch (e) {}
     list.unshift({ kind: item.kind, title: item.title, date: item.date, start: item.start, repeat: !!item.repeat });
-    list = list.slice(0, 5);
+    list = list.slice(0, 8);
     store.set('qa_recent', JSON.stringify(list));
     renderRecent();
   }
@@ -301,6 +367,8 @@
     $('recentWrap').classList.toggle('hidden', list.length === 0);
   }
 
+  // ---------- main actions ----------
+
   $('gear').onclick = function () {
     $('url').value = store.get('qa_url');
     $('token').value = store.get('qa_token');
@@ -313,19 +381,6 @@
     setStatus('Settings saved.', 'ok');
   };
 
-  $('kind').onchange = function () { syncFields(); syncRepeat(); };
-  $('allDay').onchange = syncFields;
-  $('start').oninput = syncRepeat;
-  $('repeat').onchange = syncRepeat;
-  $('ends').onchange = syncRepeat;
-  Array.prototype.forEach.call(document.querySelectorAll('#days .chip'), function (c) {
-    c.onclick = function () {
-      var on = !c.classList.contains('on');
-      c.classList.toggle('on', on);
-      c.setAttribute('aria-pressed', on ? 'true' : 'false');
-    };
-  });
-
   $('go').onclick = function () {
     var text = $('text').value.trim();
     if (!text) return;
@@ -333,7 +388,12 @@
     setStatus('Working on it…');
     $('confirm').classList.add('hidden');
     call({ action: 'parse', text: text, now: nowString() })
-      .then(function (j) { setStatus(''); showConfirm(j.item); })
+      .then(function (j) {
+        var items = j.items || (j.item ? [j.item] : []);
+        if (!items.length) throw new Error('Could not find an event or task in that.');
+        setStatus('');
+        showConfirm(items);
+      })
       .catch(function (e) { setStatus(e.message, 'err'); })
       .then(function () { $('go').disabled = false; });
   };
@@ -343,22 +403,61 @@
     setStatus('');
   };
 
+  function destination(item) {
+    return (item.kind === 'task' && !item.start && !item.repeat) ? 'Google Tasks' : 'Google Calendar';
+  }
+
+  function describeAdded(items) {
+    if (items.length === 1) return 'Added to ' + destination(items[0]) + '.';
+    var tasks = items.filter(function (i) { return destination(i) === 'Google Tasks'; }).length;
+    var cal = items.length - tasks, parts = [];
+    if (cal) parts.push(cal + ' to Google Calendar');
+    if (tasks) parts.push(tasks + ' to Google Tasks');
+    return 'Added ' + parts.join(' and ') + '.';
+  }
+
   $('save').onclick = function () {
-    var item = readForm();
-    if (!item.title || !item.date) { setStatus('Title and date are required.', 'err'); return; }
-    if ($('repeat').value && $('ends').value === 'on') {
-      if (!item.repeat.until) { setStatus('Pick a last day, or set Ends to Never.', 'err'); return; }
-      if (item.repeat.until < item.date) { setStatus('The last day is before the first date.', 'err'); return; }
+    var cards = allCards();
+    var items = [];
+    for (var i = 0; i < cards.length; i++) {
+      var card = cards[i], it = readCard(card), problem = '';
+      showCardError(card, '');
+      if (!it.title || !it.date) problem = 'Title and date are required.';
+      else if (it.repeat && f(card, 'ends').value === 'on' && !it.repeat.until) problem = 'Pick a last day, or set Ends to Never.';
+      else if (it.repeat && it.repeat.until && it.repeat.until < it.date) problem = 'The last day is before the first date.';
+      if (problem) {
+        showCardError(card, problem);
+        setStatus(cards.length > 1 ? 'Fix item ' + (i + 1) + ' first.' : problem, 'err');
+        card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        return;
+      }
+      items.push(it);
     }
+    if (!items.length) return;
     $('save').disabled = true;
     setStatus('Saving…');
-    call({ action: 'save', item: item })
-      .then(function () {
-        addRecent(item);
-        $('confirm').classList.add('hidden');
-        $('text').value = '';
-        var toTasks = item.kind === 'task' && !item.start && !item.repeat;
-        setStatus('Added to ' + (toTasks ? 'Google Tasks' : 'Google Calendar') + '.', 'ok');
+    call({ action: 'save', items: items })
+      .then(function (j) {
+        var results = j.results || items.map(function () { return { ok: true }; });
+        var added = [], failed = 0;
+        results.forEach(function (r, idx) {
+          if (r.ok) {
+            added.push(items[idx]);
+            addRecent(items[idx]);
+            cards[idx].parentNode.removeChild(cards[idx]);
+          } else {
+            failed += 1;
+            showCardError(cards[idx], r.error || 'Could not save this one.');
+          }
+        });
+        if (!failed) {
+          $('confirm').classList.add('hidden');
+          $('text').value = '';
+          setStatus(describeAdded(added), 'ok');
+        } else {
+          refreshLayout();
+          setStatus((added.length ? describeAdded(added) + ' ' : '') + failed + ' could not be saved. Fix and save again.', 'err');
+        }
       })
       .catch(function (e) { setStatus(e.message, 'err'); })
       .then(function () { $('save').disabled = false; });
